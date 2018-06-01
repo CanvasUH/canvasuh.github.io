@@ -8,8 +8,7 @@
 // @grant        none
 // ==/UserScript==
 
-//For module item in module: https://usn.instructure.com/courses/12688/modules#context_module_item_24437
-//Need to get the module id and the course id.
+//Typical module item url in a module: https://usn.instructure.com/courses/12688/modules#context_module_item_24437
 
 (function() {
     'use strict';
