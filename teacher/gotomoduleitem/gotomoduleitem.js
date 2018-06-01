@@ -21,10 +21,16 @@
 
 function getHeaderBarJson()
 {
-    //Content page and quiz
-    var headerBar = $(".header-bar-right");
     var headerBarPosition = "after";
 
+    //Content page
+    var headerBar = $("#wiki_page_show > div.header-bar-outer-container > div > div.header-bar.flex-container > div.header-bar-right.header-right-flex");
+
+    //Quiz
+    if ( !headerBar.length )
+    {
+        headerBar = $("#quiz_show > div.header-bar > div");
+    }
     //Assignment
     if ( !headerBar.length )
     {
