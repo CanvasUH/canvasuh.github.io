@@ -794,8 +794,8 @@ if (typeof module !== "undefined" && module !== null) {
 (function() {
     'use strict';
     var bCancel = false;
-    var params = { per_page: 999 };
-    var contentarea = $('#content');
+    var params = { per_page: 9999 };
+
     var error = function(error) {
         console.error("error calling api", error);
     };
@@ -863,17 +863,46 @@ if (typeof module !== "undefined" && module !== null) {
         }
     }
 
+    //Denne må være global slik at csv innholdet kan lastes ned når rapporten er ferdig.
+    var csv = "data:text/csv;charset=utf-8,";
+
     function presentResult(students, modules)
     {
+        var CSVNEWLINE = "\r\n";
+        var CSVSEPARATOR = ",";
         var contenttext = "";
+
         var studentSummary = getNumberOfStudentsThatHaveCompletedTheCourse(modules);
-        contenttext = "<h1>Student progress report</h1>";
+        contenttext = "<h3>Resultat</h3>";
         var noOfModules = getNoOfPublishedModules(modules);
-        contenttext += "Number of students:" + studentSummary.noOfStudents;
-        contenttext += "<br/>Number of modules:" + noOfModules;
         var courseCompletionPercent = (studentSummary.noOfStudentsPassed * 100 / studentSummary.noOfStudents).toFixed(0);
-        contenttext += "<br/>Course completion:" + studentSummary.noOfStudentsPassed + "(" + courseCompletionPercent + "%)";
-        contenttext += "<table class='table'><thead><tr><th>Module name</th><th>Students passed</th><th>Module completion %</th><th>Note</th></tr></thead><tbody>";
+
+        var s1 = "Totalt antall studenter";
+        var s2 = "Antall studenter som har gjennomført hele kurset:";
+        var s3 = "Prosent";
+
+        //HTML summary
+        contenttext += "<table class='table'><tbody>";
+        contenttext += "<tr><td>" + s1 + "</td><td>" + studentSummary.noOfStudents + "</td></tr>";
+        contenttext += "<tr><td>" + s2 + "</td><td>" + studentSummary.noOfStudentsPassed + "</td></tr>";
+        contenttext += "<tr><td>" + s3 + "</td><td>" + courseCompletionPercent + "</td></tr>";;
+        contenttext += "</tbody></table>";
+
+        //CSV summary
+        csv += s1 +CSVSEPARATOR + studentSummary.noOfStudents + CSVNEWLINE;
+        csv += s2 +CSVSEPARATOR + studentSummary.noOfStudentsPassed + CSVNEWLINE;
+        csv += s3 + CSVSEPARATOR + courseCompletionPercent + CSVNEWLINE;
+
+        //Modulresultat
+        var th1 = "Modulnavn";
+        var th2 = "Studenter som har fullført modulen";
+        var th3 = "Prosent";
+        var th4 = "Merk";
+
+        contenttext += "<table class='table'><thead><tr><th>" + th1 + "</th><th>" + th2 + "</th><th>" + th3 + "</th><th>" + th4 + "</th></tr></thead><tbody>";
+
+        csv += th1 + CSVSEPARATOR + th2 + CSVSEPARATOR + th3 + CSVSEPARATOR + th4 + CSVNEWLINE;
+
         for (var i = 0; i < modules.length; i++) {
             var module = modules[i];
             if(module.published)
@@ -886,10 +915,20 @@ if (typeof module !== "undefined" && module !== null) {
                 }
                 var moduleCompletionPercent = (noOfStudentsCompletedModule * 100 / studentSummary.noOfStudents).toFixed(0);
                 contenttext += "<tr><td>" + module.name + "</td><td>" + noOfStudentsCompletedModule + "</td><td>" + moduleCompletionPercent + "</td><td>" + note + "</td></tr>";
+                csv += module.name + CSVSEPARATOR + noOfStudentsCompletedModule + CSVSEPARATOR + moduleCompletionPercent + CSVSEPARATOR + note + CSVNEWLINE;
             }
         }
         contenttext += "</tbody></table>";
-        contentarea.html(contenttext);
+        $("#resultarea").html(contenttext);
+
+        //CSV knapp
+        var encodedUri = encodeURI(csv);
+        var link = $('#mmoocReportButtonId');
+        link.off();
+        link.html("Last ned CSV");
+        link.attr("href", encodedUri);
+        link.attr("download", encodedUri);
+        link.attr("download", modules.kursnavn + ".csv");
     }
 
     function getNoOfPublishedModules(modules)
@@ -1027,32 +1066,46 @@ if (typeof module !== "undefined" && module !== null) {
         updateOverallProgress("");
         updatePageProgress("");
         updateStudentProgress("")
-        $("#cancelDiv").html("Rapport avbrutt.");
+        $("#mmoocReportButtonDiv").html("Rapport avbrutt.");
     }
 
+    ////////
+    //MAIN
+    ////////
+    //Her lager vi knappen i Canvas!
     $("#course_show_secondary > div.course-options").append('<a id="studentreport" class="btn button-sidebar-wide" href="#"><i class="icon-announcement"></i>Student progress</a>');
 
+    //Når man trykker på knappen så kjører koden nedenfor.
     $('#studentreport').on('click', function() {
         bCancel = false;
-        contentarea.html('<h1>Student progress</h1><div id="mmoocOverallProgress"></div><div id="mmoocPageProgress"></div><div id="mmoocStudentProgress"></div><div id="cancelDiv"><a id="cancelStudentReport" class="btn" href="#">Avbryt</a></div>');
-        $('#cancelStudentReport').on('click', function() {
-            $("#cancelDiv").html("Avbryter rapport...");
+        var contentarea = $('#content');
+        contentarea.html('<h1>Student progress</h1>\
+<div id="mmoocOverallProgress"></div><div id="mmoocPageProgress">\
+</div><div id="mmoocStudentProgress"></div>\
+<div id="resultarea"></div>\
+<div id="mmoocReportButtonDiv"><a id="mmoocReportButtonId" class="btn" href="#">Avbryt</a></div>');
+        $('#mmoocReportButtonId').on('click', function() {
+            $("#mmoocReportButtonDiv").html("Avbryter rapport...");
             bCancel = true;
         });
 
         var courseId = mmooc.api.getCurrentCourseId();
-        updateOverallProgress("Henter moduler...");
-        mmooc.api.getModulesForCourseId(function(modules) {
-            var page = 1;
-            var per_page = 50;
-            var noOfPublishedModules = getNoOfPublishedModules(modules);
-            //Array where the key is the module id and the value is how many students have completed the module.
-            modules.gmodulecompleted = {};
-            //Array where the key is the student id and the value is true or false depending on whether the student has passed the course.
-            modules.gcoursecompleted = {};
-            initializeResult(modules);
+        updateOverallProgress("Henter kursinformasjon...");
+        mmooc.api.getCourse(courseId, function(course) {
+            updateOverallProgress("Henter moduler...");
+            mmooc.api.getModulesForCourseId(function(modules) {
+                var page = 1;
+                var per_page = 50;
+                var noOfPublishedModules = getNoOfPublishedModules(modules);
+                //Array where the key is the module id and the value is how many students have completed the module.
+                modules.kursnavn = course.name;
+                modules.gmodulecompleted = {};
+                //Array where the key is the student id and the value is true or false depending on whether the student has passed the course.
+                modules.gcoursecompleted = {};
+                initializeResult(modules);
 
-            processStudents(courseId, noOfPublishedModules,  modules, page, per_page);
-        }, error, courseId); //End getModulesForCourseId
+                processStudents(courseId, noOfPublishedModules,  modules, page, per_page);
+            }, error, courseId); //End getModulesForCourseId
+        }, error);
     });
 })();
