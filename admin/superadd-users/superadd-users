@@ -1,0 +1,43 @@
+// ==UserScript==
+// @name         Superadd-users
+// @namespace    http://tampermonkey.net/
+// @version      0.1
+// @description  Add users from GUI without the need to accept invitation.
+// @author       Tore
+// @match        https://*.instructure.com/courses/*/users
+// @grant        none
+// ==/UserScript==
+
+(function() {
+    'use strict';
+    var firstPageSettings = {};
+    var AddUserIntervall = setInterval(function (){
+        if ($('#add_people_modal').length){
+            if ($('#peoplesearch_select_role').length){
+               //page 1
+                $('superaddpeople').remove();
+                firstPageSettings.loginid = $('#peoplesearch_radio_unique_id').prop('checked');
+                firstPageSettings.role = $('#peoplesearch_select_role').val();
+                firstPageSettings.section = $('#peoplesearch_select_section').val();
+                firstPageSettings.limited = $('#limit_privileges_to_course_section').prop('checked');
+            }else{
+               //page 2
+               if (!$('#superaddpeople').length){
+                   $('#addpeople_next').after('<button id="superaddpeople" type="button" tabindex="0" style="margin:0px; margin-left:5px">Superadd users</button>');
+                   $('#superaddpeople').on('click', function() {
+                       if (!firstPageSettings.loginid){
+                           alert ("You must use Login-ID!");
+                       }else{
+                           $('div.addpeople__peoplereadylist table tbody tr td:nth-child(3)').each(function(index){
+                               var my_params = {user_id:'sis_login_id:'+$( this ).text(), role_id:firstPageSettings.role, enrollment_state:'active', course_section_id:firstPageSettings.section, limit_privileges_to_course_section:firstPageSettings.limited};
+                               $.post(document.location.origin+'/api/v1/courses/'+ENV.course.id+'/enrollments', {enrollment:my_params});
+                           });
+                           location.reload(true);
+                       }
+                   });
+               }
+
+            }
+        }
+    },500);
+})();
