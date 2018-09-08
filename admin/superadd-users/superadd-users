@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         Superadd-users
+// @name         Superadd-users2
 // @namespace    http://tampermonkey.net/
 // @version      0.1
-// @description  Add users from GUI without the need to accept invitation.
+// @description  Add users without the need to accept invitation.
 // @author       Tore
 // @match        https://*.instructure.com/courses/*/users
 // @grant        none
@@ -10,34 +10,107 @@
 
 (function() {
     'use strict';
-    var firstPageSettings = {};
-    var AddUserIntervall = setInterval(function (){
-        if ($('#add_people_modal').length){
-            if ($('#peoplesearch_select_role').length){
-               //page 1
-                $('superaddpeople').remove();
-                firstPageSettings.loginid = $('#peoplesearch_radio_unique_id').prop('checked');
-                firstPageSettings.role = $('#peoplesearch_select_role').val();
-                firstPageSettings.section = $('#peoplesearch_select_section').val();
-                firstPageSettings.limited = $('#limit_privileges_to_course_section').prop('checked');
-            }else{
-               //page 2
-               if (!$('#superaddpeople').length){
-                   $('#addpeople_next').after('<button id="superaddpeople" type="button" tabindex="0" style="margin:0px; margin-left:5px">Superadd users</button>');
-                   $('#superaddpeople').on('click', function() {
-                       if (!firstPageSettings.loginid){
-                           alert ("You must use Login-ID!");
-                       }else{
-                           $('div.addpeople__peoplereadylist table tbody tr td:nth-child(3)').each(function(index){
-                               var my_params = {user_id:'sis_login_id:'+$( this ).text(), role_id:firstPageSettings.role, enrollment_state:'active', course_section_id:firstPageSettings.section, limit_privileges_to_course_section:firstPageSettings.limited};
-                               $.post(document.location.origin+'/api/v1/courses/'+ENV.course.id+'/enrollments', {enrollment:my_params});
-                           });
-                           location.reload(true);
-                       }
-                   });
-               }
 
-            }
+    class uioTranslated {
+        constructor (words, defaultlang='en'){
+            this.words = words;
+            this.defaultlang = defaultlang;
         }
-    },500);
+        toString(){
+            return this.words[ENV.LOCALE]?this.words[ENV.LOCALE]:this.words[this.defaultlang];
+        }
+        use(...values){
+            let returnstring = this.words[ENV.LOCALE]?this.words[ENV.LOCALE]:this.words[this.defaultlang];
+            for (let i=0; i<values.length; i++){
+                returnstring = returnstring.replace(`[${i}]`, values[i]);
+            }
+            return returnstring;
+        }
+    }
+
+    const preventCreatingNewUsers = true; //if true, checkboxes to create new users are removed.
+    const buttonName = new uioTranslated({'en':'Directly add users','nb':'Legg til brukere direkte', 'nn':'Legg til brukarar direkte'});
+    const altErrorMessage = new uioTranslated({'en':"We couldn't find the people below. They will be skipped for now.",'nb':'Vi kunne ikke finne personene under. Disse vil hoppes over for nå.','nn':'Vi kunne ikkje finna personane under. Desse vil hoppast over for no.'});
+    const sentPeople = new uioTranslated({'en':'[0] of [1] people are enrolled.','nb':'[0] av [1] personer er påmeldt.', 'nn':'[0] av [1] personar er påmeld.'})
+    var firstPageSettings = {};
+    let addUserIntervall = null;
+    let prevModalPage = 0;
+
+    async function postPerson(canvparams) {
+        return await $.post(document.location.origin+'/api/v1/courses/'+ENV.course.id+'/enrollments', {enrollment:canvparams});
+    }
+
+    function addPeopleClicked (){
+        //clearInterval(addUserIntervall);
+        //remove buttons
+        $('#addpeople_cancel').hide();
+        $('#addpeople_back').hide();
+        $('#addpeople_next').hide();
+        $('#superaddpeople').hide();
+
+        let my_params = {role_id:firstPageSettings.role, enrollment_state:'active', limit_privileges_to_course_section:firstPageSettings.limited};
+        if (firstPageSettings.section != null){
+            my_params.course_section_id = firstPageSettings.section;
+        }
+        let mypeople = $('div.addpeople__peoplereadylist table tbody tr td:nth-child(3)');
+        let peopletotal = mypeople.length;
+        let peoplesent = 0;
+        let dialogtext = $('div.peoplereadylist__pad-box div div:eq(1)');
+        mypeople.each(function(index){
+            my_params.user_id = 'sis_login_id:'+$(this).text();
+            peoplesent++;
+            dialogtext.text(sentPeople.use(peoplesent,peopletotal));
+        });
+        setTimeout(()=>location.reload(true), 2000);
+    }
+
+    function gotoPageTwo (){
+        //store data (except user list) from page one
+        firstPageSettings.loginid = $('#peoplesearch_radio_unique_id').prop('checked');
+        firstPageSettings.role = $('#peoplesearch_select_role').val();
+        firstPageSettings.section = $('#peoplesearch_select_section').val();
+        firstPageSettings.limited = $('#limit_privileges_to_course_section').prop('checked');
+    }
+
+    function checkModal (){
+        if ($('#add_people_modal').length){
+            if ($('#peoplesearch_select_role').length && prevModalPage != 1){
+                //changed to page 1
+                prevModalPage = 1;
+                $('superaddpeople').remove(); //remove extra add-button if it exist.
+                $('#addpeople_next').on('mousedown.addsuper',gotoPageTwo); //add mousedown to next button.
+            }else if ($('div.addpeople__peoplevalidationissues').length && prevModalPage != 3){
+                //changed to errorpage - some people couldn't be found
+                $('#addpeople_next').off("mousedown.addsuper"); //remove mousedown-function for next button.
+                if (preventCreatingNewUsers){
+                    if ($('div.peoplevalidationissues__missing table input').length){ //if table with content is created
+                        //change errortext, and hide check boxes and buttons in the table
+                        $('div.peoplevalidationissues__missing div:first div:eq(1)').text(altErrorMessage);
+                        $('div.peoplevalidationissues__missing table tr :first-child').hide();
+                        $('div.peoplevalidationissues__missing table button').hide();
+                        prevModalPage = 3;
+                    }
+                }else{
+                    prevModalPage = 3;
+                }
+            }else if ($('div.addpeople__peoplereadylist').length && prevModalPage != 2){
+                //changed to page 2
+                if (firstPageSettings.loginid){ //only show the superadd button if login-id was chosen on page one
+                    if (!$('#superaddpeople').length){
+                        prevModalPage = 2;
+                        $('#addpeople_next').off("mousedown.addsuper");
+                        $('#addpeople_next').after(`<button id="superaddpeople" type="button" tabindex="0" style="margin:0px; margin-left:5px">${buttonName}</button>`);
+                        $('#superaddpeople').click(addPeopleClicked);
+                    }
+                }else{
+                    prevModalPage = 2;
+                }
+            }
+        }else{
+            //#add_people_modal doesn't exist
+            prevModalPage = 0;
+        }
+    }
+
+    addUserIntervall = setInterval(checkModal,500);
 })();
