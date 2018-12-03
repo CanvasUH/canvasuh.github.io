@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         Superadd-users2
+// @name         Superadd-users
 // @namespace    http://tampermonkey.net/
 // @version      0.1
 // @description  Add users without the need to accept invitation.
