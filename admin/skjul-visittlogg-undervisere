@@ -1,4 +1,4 @@
-// Utropstegn foran gjoer funksjonen til et 'uttrykk' og soerger demred for at den utfoeres oeyeblikklig
+// Utropstegn foran gjoer funksjonen til et 'uttrykk' og soerger dermed for at den utfoeres oeyeblikklig
 !function(){
 
 	// Opprette et eget stilark-objekt for sida
