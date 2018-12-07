@@ -1,0 +1,32 @@
+// Utropstegn foran gjoer funksjonen til et 'uttrykk' og soerger demred for at den utfoeres oeyeblikklig
+!function(){
+
+	// Opprette et eget stilark-objekt for sida
+	var hideLogDataStyle = document.createElement('style');
+	
+	// Grunnlegende visning for tidsdata er 'ikke-vis', her CSS-tekst:
+	var useStyle = 'display: none;';
+	
+	if ((typeof ENV['current_user_roles'] != 'undefined') && (ENV['current_user_roles'].indexOf('admin') > 0)){
+	
+		// Dersom den paaloggede er administrator, vis tidsdata likevel, men med roed skrift
+		useStyle = 'color: #eb6851;';
+		
+		if (ENV['current_user_roles'].indexOf('root_admin') > 0){
+		
+			// Dersom den paaloggede er topp-administrator, vis med groenn skrift
+			useStyle = 'color: #009382;';
+			
+		}
+	}
+	
+	// CSS-tekst til stilarket (tallverdi for nth-child er celle-nummer i tabellrad som skal paavirkes):
+	var hideLogDataStyleCSS = document.createTextNode('.TeacherEnrollment td:nth-child(7) div {' + useStyle + '} .TeacherEnrollment td:nth-child(8) div {' + useStyle + '}');
+	
+	// Legg CSS-tekst inn i stilarket
+	hideLogDataStyle.appendChild(hideLogDataStyleCSS);
+	
+	// Legg stilarket effektivt inn i sida
+	document.head.appendChild(hideLogDataStyle);
+	
+}();
