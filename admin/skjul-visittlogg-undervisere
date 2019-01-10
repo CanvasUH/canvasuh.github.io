@@ -1,3 +1,13 @@
+// ==UserScript==
+// @name         Skjul visittlogg for lærere i Canvas
+// @namespace    https://komledott.com/
+// @version      0.1
+// @description  Administratorer ser (med farget skrift), men kolleger ser ikke når andre kolleger har besøkt kurs. NB! Det er enda mulig å få sette detaljer for den enkelte besøker om en virkelig vil.
+// @author       Terje Rudi
+// @match        //*.instructure.com/courses/*/users
+// @grant        none
+// ==/UserScript==
+
 // Utropstegn foran gjoer funksjonen til et 'uttrykk' og soerger dermed for at den utfoeres oeyeblikklig
 !function(){
 
