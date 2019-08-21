@@ -1,0 +1,17 @@
+// ==UserScript==
+// @name         Skjul irrelevante aktiviteter i et emnesammendrag
+// @namespace    http://tampermonkey.net/
+// @version      0.1
+// @description  Skjuler aktiviteter i emnesammendrag som ikke hører til inneværende år, sannsynligvis uforvarende importert ved kloning/kopiering av et emne
+// @author       Terje Rudi, HVL
+// @match        https://*.instructure.com/courses/*/assignments/syllabus
+// @grant        none
+// ==/UserScript==
+
+(function() {
+    'use strict';
+    let d = new Date();
+    let passedYearsCSS = document.createElement('style');
+    passedYearsCSS.innerText = 'tr[class^="date date_passed"]:not([class^="date date_passed events_' + d.getFullYear() + '_"]) {color: lightgrey;}';
+    document.head.appendChild(passedYearsCSS);
+})();
