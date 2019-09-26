@@ -1,0 +1,38 @@
+// ==UserScript==
+// @name         Avverge valg av Alt innhald for import til nytt emne
+// @namespace    http://tampermonkey.net/
+// @version      0.1
+// @description  For at ikke kalenderdata fra forrige semester ved ugjennomtenkt tas inn ved at bruker velger 'Alt innhald'
+// @author       Terje Rudi, HVL
+// @match        https://*.instructure.com/courses/*/content_migrations
+// @grant        none
+// ==/UserScript==
+
+let checkIfSelImp = false;
+(function() {
+    'use strict';
+    let msgTxt = {
+        'en' : 'You would normally not copy "All Content" from the old subject into the new one, e.g. Completed Activities. Be specific!',
+        'nn' : 'Du treng nok ikkje kopiera "Alt innhald" frå det gamle inn i det nye emnet, t.d. gjennomførte aktivitetar. Velg spesifikt!',
+        'nb' : 'Du behøver nok ikke ta med "Alt innhold" fra det gamle inn i det nye emnet, f.eks. gjennomførte aktiviteter. Velg spesifikt!'
+    };
+    checkIfSelImp = setInterval(function(){
+        let radios = document.getElementsByName('selective_import');
+        if (radios.length > 0){
+            for (let i = 0, length = radios.length; i < length; i++){
+                if (radios[i].value == 'true'){
+                    radios[i].checked = true;
+                    let msg = document.createElement('p');
+                    msg.className = 'text-warning';
+                    try{
+                        msg.innerText = msgTxt[document.documentElement.lang];
+                    }catch(e){
+                        msg.innerText = msgTxt['nn'];
+                    }
+                    radios[i].parentNode.appendChild(msg)
+                }
+            }
+            clearInterval(checkIfSelImp);
+        }
+    },500);
+})();
