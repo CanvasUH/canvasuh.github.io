@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         Superadd-users
+// @name         Superadd-users2
 // @namespace    http://tampermonkey.net/
 // @version      0.1
 // @description  Add users without the need to accept invitation.
@@ -9,7 +9,7 @@
 // ==/UserScript==
 
 (function() {
-    'use strict';
+'use strict';
 
     class uioTranslated {
         constructor (words, defaultlang='en'){
@@ -60,6 +60,7 @@
             my_params.user_id = 'sis_login_id:'+$(this).text();
             peoplesent++;
             dialogtext.text(sentPeople.use(peoplesent,peopletotal));
+                        postPerson(my_params);
         });
         setTimeout(()=>location.reload(true), 2000);
     }
@@ -70,6 +71,18 @@
         firstPageSettings.role = $('#peoplesearch_select_role').val();
         firstPageSettings.section = $('#peoplesearch_select_section').val();
         firstPageSettings.limited = $('#limit_privileges_to_course_section').prop('checked');
+        for (let i=0; i<ENV.ALL_ROLES.length; i++){
+           if (firstPageSettings.role == ENV.ALL_ROLES[i].label){
+              firstPageSettings.role = ENV.ALL_ROLES[i].id;
+              break;
+           }
+        }
+        for (let i=0; i<ENV.SECTIONS.length; i++){
+           if (firstPageSettings.section == ENV.SECTIONS[i].name){
+              firstPageSettings.section = ENV.SECTIONS[i].id;
+              break;
+           }
+        }
     }
 
     function checkModal (){
@@ -99,7 +112,8 @@
                     if (!$('#superaddpeople').length){
                         prevModalPage = 2;
                         $('#addpeople_next').off("mousedown.addsuper");
-                        $('#addpeople_next').after(`<button id="superaddpeople" type="button" tabindex="0" style="margin:0px; margin-left:5px">${buttonName}</button>`);
+                        $('#addpeople_next').after(`<button id="superaddpeople" type="button" tabindex="0" style="margin:0px; margin-left:5px">${buttonName}</button>`)
+;
                         $('#superaddpeople').click(addPeopleClicked);
                     }
                 }else{
@@ -113,4 +127,5 @@
     }
 
     addUserIntervall = setInterval(checkModal,500);
+
 })();
